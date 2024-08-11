@@ -5,6 +5,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import logo from '../Assets/logo.png';
+import { Link } from 'react-router-dom';
 
 export default function Navbar() {
   return (
@@ -18,11 +19,21 @@ export default function Navbar() {
             aria-label="logo"
             sx={{ mr: 2 }}
           >
-            <img src={logo} alt="Logo" style={{ height: '30px',marginLeft:'10px' }} />
+            <Link to="/" style={{ textDecoration: 'none' }}>
+            <img src={logo} alt="Logo" style={{ height: '30px', marginLeft: '10px' }} />
+            </Link>
           </IconButton>
-          <Box sx={{ flexGrow: 1 }} />  {/* This Box will take up the remaining space and push the buttons to the right */}
-          <Button variant="contained" style={{ backgroundColor: '#1A4870',color: 'white',margin:'10px'}}>Login</Button>
-          <Button variant="contained" style={{ backgroundColor: '#1A4870',color: 'white',margin:'10px'}}>Register</Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <Link to="/login" style={{ textDecoration: 'none' }}>
+            <Button variant="contained" style={{ backgroundColor: '#1A4870', color: 'white', margin: '10px' }}>
+              Login
+            </Button>
+          </Link>
+          <Link to="/register" style={{ textDecoration: 'none' }}>
+            <Button variant="contained" style={{ backgroundColor: '#1A4870', color: 'white', margin: '10px' }}>
+              Register
+            </Button>
+          </Link>
         </Toolbar>
       </AppBar>
     </Box>
