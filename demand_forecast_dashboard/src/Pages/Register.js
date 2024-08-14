@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Container, TextField, Button, MenuItem, Typography, Box, Paper } from '@mui/material';
+import { Container, TextField, Button, MenuItem, Typography, Box, Paper, Alert } from '@mui/material';
 import Navbar from '../Components/Navbar';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate hook
 
 const roles = ['b6', 'b7', 'b8'];
 
-const RegisterPage = () => {
+const Register = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -31,6 +32,8 @@ const RegisterPage = () => {
   });
 
   const [formValid, setFormValid] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false); // State for success message
+  const navigate = useNavigate(); // Initialize useNavigate hook
 
   const validateEmail = (email) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -73,7 +76,30 @@ const RegisterPage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+//   const handleSubmit = (e) => {
+//     e.preventDefault();
+//     setTouched({
+//       fullName: true,
+//       email: true,
+//       password: true,
+//       confirmPassword: true,
+//       role: true,
+//     });
+//     validateForm(formData);
+//     if (formValid) {
+//       // Save user data to localStorage
+//       localStorage.setItem('user', JSON.stringify(formData));
+//       console.log('User registered:', formData);
+//       setRegistrationSuccess(true); // Show success message
+
+//       // Redirect to the login page after 2 seconds
+//       setTimeout(() => {
+//         navigate('/login');
+//       }, 2000);
+//     }
+//   };
+
+const handleSubmit = (e) => {
     e.preventDefault();
     setTouched({
       fullName: true,
@@ -84,10 +110,18 @@ const RegisterPage = () => {
     });
     validateForm(formData);
     if (formValid) {
-      // Handle form submission
-      console.log('Form submitted:', formData);
+      // Save user data to localStorage, but don't log them in
+      localStorage.setItem('registeredUser', JSON.stringify(formData));
+      console.log('User registered:', formData);
+      setRegistrationSuccess(true); // Show success message
+  
+      // Redirect to the login page after 2 seconds
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     }
   };
+  
 
   return (
     <>
@@ -106,6 +140,11 @@ const RegisterPage = () => {
             <Typography variant="h4" component="h1" align="center" gutterBottom>
               Register
             </Typography>
+            {registrationSuccess && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                User successfully registered! Redirecting to login...
+              </Alert>
+            )}
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
               <TextField
                 fullWidth
@@ -194,4 +233,4 @@ const RegisterPage = () => {
   );
 };
 
-export default RegisterPage;
+export default Register;

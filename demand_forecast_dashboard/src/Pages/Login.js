@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Container, TextField, Button, MenuItem, Typography, Box, Paper } from '@mui/material';
+import { Container, TextField, Button, MenuItem, Typography, Box, Paper, Alert } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../Components/Navbar';
 
 const roles = ['b6', 'b7', 'b8'];
 
-const LoginPage = () => {
+const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,6 +25,9 @@ const LoginPage = () => {
   });
 
   const [formValid, setFormValid] = useState(false);
+  const [loginSuccessful, setLoginSuccessful] = useState(false); // State to track login success
+  const [loginError, setLoginError] = useState(''); // State to track login errors
+  const navigate = useNavigate(); // Initialize the navigate hook
 
   const validateEmail = (email) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -63,7 +67,51 @@ const LoginPage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+//   const handleSubmit = (e) => {
+//     e.preventDefault();
+//     setTouched({
+//       email: true,
+//       password: true,
+//       role: true,
+//     });
+//     validateForm(formData);
+
+//     if (formValid) {
+//       // Retrieve user data from localStorage
+//       const storedUser = JSON.parse(localStorage.getItem('registeredUser'));
+
+//       if (storedUser) {
+//         if (
+//           storedUser.email === formData.email &&
+//           storedUser.password === formData.password &&
+//           storedUser.role === formData.role
+//         ) {
+//           console.log('Login successful!');
+//           setLoginSuccessful(true);
+//           setLoginError('');
+
+//           // Store the logged-in user information
+//           localStorage.setItem('loggedUser', JSON.stringify(storedUser));
+
+//           // Redirect to the dashboard after a short delay
+//           setTimeout(() => {
+//             navigate('/dashboard');
+//           }, 1000);
+//         } else {
+//           console.log('Invalid credentials');
+//           setLoginError('Invalid email, password, or role');
+//         }
+//       } else {
+//         console.log('No user found with this email');
+//         setLoginError('No user found with this email');
+//       }
+//     } else {
+//       console.log('Form is not valid');
+//       setLoginError('Please fill out all required fields correctly');
+//     }
+//   };
+
+const handleSubmit = (e) => {
     e.preventDefault();
     setTouched({
       email: true,
@@ -71,11 +119,40 @@ const LoginPage = () => {
       role: true,
     });
     validateForm(formData);
+  
     if (formValid) {
-      // Handle form submission
-      console.log('Form submitted:', formData);
+      // Retrieve user data from localStorage
+      const storedUser = JSON.parse(localStorage.getItem('registeredUser'));
+  
+      if (storedUser) {
+        if (
+          storedUser.email === formData.email &&
+          storedUser.password === formData.password &&
+          storedUser.role === formData.role
+        ) {
+          console.log('Login successful!');
+          setLoginSuccessful(true);
+          setLoginError('');
+  
+          // Store the logged-in user information
+          localStorage.setItem('loggedUser', JSON.stringify(storedUser));
+  
+          // Redirect to the dashboard immediately
+          navigate('/dashboard');
+        } else {
+          console.log('Invalid credentials');
+          setLoginError('Invalid email, password, or role');
+        }
+      } else {
+        console.log('No user found with this email');
+        setLoginError('No user found with this email');
+      }
+    } else {
+      console.log('Form is not valid');
+      setLoginError('Please fill out all required fields correctly');
     }
   };
+  
 
   return (
     <>
@@ -94,6 +171,16 @@ const LoginPage = () => {
             <Typography variant="h4" component="h1" align="center" gutterBottom>
               Login
             </Typography>
+            {loginSuccessful && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Login successful! Redirecting to the dashboard...
+              </Alert>
+            )}
+            {loginError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {loginError}
+              </Alert>
+            )}
             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
               <TextField
                 fullWidth
@@ -157,4 +244,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default Login;
