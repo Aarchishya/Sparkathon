@@ -31,7 +31,7 @@ def drop_down_data():
 
         # Products for which the demand forecasts has been generated
         products = eval_results["item_id"].unique().tolist()
-        products_map = [{"id" : i, "name" : i.replace('_', ' ')} for i in products] + [{"All" : "All"}]
+        products_map = [{"id" : i, "name" : i.replace('_', ' ')} for i in products] + [{"id" : "All", "name" : "All"}]
 
         result = {
             "weeks" : weeks,
@@ -51,7 +51,7 @@ def eval_results_data():
         
         # Collect the request paramaters
         week = request_params["week"]
-        product = request["product_id"]
+        product = request_params["product_id"]
 
         # Result data frame preprocessing
         result = eval_results.copy(deep = True)
@@ -96,8 +96,8 @@ def all_results_data():
         result_part1["recordType"] = "Actual Historical"
         result_part2["recordType"] = "Forecasted"
 
-        result_part1["inventoryLevel"] = result_part1.apply(lambda row : calculate_inventory_level(row["actual"], 0.95, row["stdev_demand"]))
-        result_part2["inventoryLevel"] = result_part2.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]))
+        result_part1["inventoryLevel"] = result_part1.apply(lambda row : calculate_inventory_level(row["actual"], 0.95, row["stdev_demand"]), axis = 1)
+        result_part2["inventoryLevel"] = result_part2.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]), axis = 1)
 
         result_part1["demandLevel"] = result_part1["actual"]
         result_part2["demandLevel"] = result_part2["ensemble_predictions"]
@@ -109,19 +109,19 @@ def all_results_data():
         result_part2["productCategory"] = result_part2["item_id"].apply(lambda x : x.split('_')[0])
 
         result_part1["date"] = result_part1["week"].replace({
-            i : datetime.strptime("2011-01-29", "%Y/%m/%d").dt.date + timedelta(days =  (i + 1) * 7)
-            for i in range(result_part1["week"].unique().tolist())
+            i : (datetime.strptime("2011-01-29", "%Y-%m-%d") + timedelta(days =  (i + 1) * 7)).strftime("%Y/%m/%d")
+            for i in range(len(result_part1["week"].unique().tolist()))
         })
 
         result_part1["date"] = result_part1["week"].replace({
-            i : datetime.strptime("2011-01-29", "%Y/%m/%d").dt.date + timedelta(days =  (i + 12) * 7)
-            for i in range(result_part1["week"].unique().tolist())
+            i : (datetime.strptime("2011-01-29", "%Y-%m-%d") + timedelta(days =  (i + 12) * 7)).strftime("%Y/%m/%d")
+            for i in range(len(result_part1["week"].unique().tolist()))
         })
 
         result = pd.concat([result_part1, result_part2], axis = 0, ignore_index = True)
 
         # Select only required columns.
-        result = result[["date", "productName", "productCategory", "inventoryLevel", "recordType"]]
+        result = result[["date", "productName", "productCategory", "inventoryLevel", "demandLevel", "recordType"]]
 
         # Convert the result into JSON format.
         result = result.to_json(orient = "records") 
@@ -139,7 +139,7 @@ def metric_cards_data():
         
         # Collect the request paramaters
         week = request_params["week"]
-        product = request["product_id"]
+        product = request_params["product_id"]
 
         # Result data frame preprocessing
         result = eval_results.copy(deep = True)
@@ -155,41 +155,38 @@ def metric_cards_data():
 
         # Top Metrics Card calculation    
 
-        result["lead_time"] = (result["ensemble_predictions"] / result["mean_demand"]) * 7
-        result["lead_time"] = result["lead_time"].fillna(0)
-        result["inventoryLevel"] = result.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]))
+        lead_time = (result["ensemble_predictions"].mean() / result["mean_demand"].mean()) * 7
 
-        lead_time = result["lead_time"].mean()
+        result["inventoryLevel"] = result.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]), axis = 1)
         dos = result["inventoryLevel"] / (result["ensemble_predictions"] / 7)
         dos = dos.fillna(0)
         dos = dos.mean()
         avg_inventory = result["inventoryLevel"].mean()
         avg_demand = result["ensemble_predictions"].mean()
 
-        result =  {
+        result =  [{
             "title": "Restock Lead Time",
-            "value": f"{lead_time} (Days)",
+            "value": f"{round(lead_time)} (Days)",
         },
         {
             "title": "Days of Supply",
-            "value": f"{dos} (Days)",
+            "value": f"{round(dos)} (Days)",
         },
         {
             "title": "Average Inventory",
-            "value": f"{avg_inventory} (Tons)",
+            "value": f"{round(avg_inventory)} (Tons)",
         },
         {
-            "title": "WoW Average Demand",
-            "value": f"{avg_demand} (Tons)",
-        }
-
-        return result
+            "title": "Average Demand",
+            "value": f"{round(avg_demand)} (Tons)",
+        }]
+        return json.dumps(result)
     else:
         return abort(400)
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8081, threaded=True)
+    app.run(debug=True, host="0.0.0.0", port=8086, threaded=True)
 
 
 
