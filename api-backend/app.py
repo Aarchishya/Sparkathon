@@ -108,21 +108,28 @@ def all_results_data():
         result_part1["productCategory"] = result_part1["item_id"].apply(lambda x : x.split('_')[0])
         result_part2["productCategory"] = result_part2["item_id"].apply(lambda x : x.split('_')[0])
 
-        result_part1["date"] = result_part1["week"].replace({
-            i : (datetime.strptime("2011-01-29", "%Y-%m-%d") + timedelta(days =  (i + 1) * 7)).strftime("%Y/%m/%d")
-            for i in range(len(result_part1["week"].unique().tolist()))
-        })
+        # result_part1["date"] = result_part1["week_date"].replace({
+        #     i : (datetime.strptime("2011-01-29", "%Y-%m-%d") + timedelta(days = i + 1)).strftime("%Y/%m/%d")
+        #     for i in range(len(result_part1["week"].unique().tolist()) + 1)
+        # })
 
-        result_part1["date"] = result_part1["week"].replace({
-            i : (datetime.strptime("2011-01-29", "%Y-%m-%d") + timedelta(days =  (i + 12) * 7)).strftime("%Y/%m/%d")
-            for i in range(len(result_part1["week"].unique().tolist()))
-        })
+        result_part1["date"] = result_part1["week_date"].astype(str)
+
+        # result_part2["date"] = result_part2["week"].replace({
+        #     i : (datetime.strptime("2016-03-20", "%Y-%m-%d") + timedelta(weeks =  i)).strftime("%Y/%m/%d")
+        #     for i in range(len(result_part2["week"].unique().tolist()) + 1)
+        # })
+        # result_part1["date"] = result_part1["week"]
+        # result_part2["date"] = result_part2["week"]
+        result_part2["date"] = (pd.to_datetime(result_part2["week_date"]) + pd.to_timedelta(result_part2["week"] * 7, unit = 'D'))
+        result_part2["date"] = result_part2["date"].astype(str)
 
         result = pd.concat([result_part1, result_part2], axis = 0, ignore_index = True)
 
         # Select only required columns.
         result = result[["date", "productName", "productCategory", "inventoryLevel", "demandLevel", "recordType"]]
-
+        result = result.groupby(["date", "productName", "productCategory", "recordType"]).agg({"inventoryLevel" : "sum", "demandLevel" : "sum"}).reset_index()
+        result = result[result["date"] != 'nan' ]
         # Convert the result into JSON format.
         result = result.to_json(orient = "records") 
 
@@ -181,6 +188,47 @@ def metric_cards_data():
             "value": f"{round(avg_demand)} (Tons)",
         }]
         return json.dumps(result)
+    else:
+        return abort(400)
+    
+@app.route("/api/v1/chart_data", methods = ["GET", "POST"])
+@cross_origin(origins='*')
+def chart_data():
+    if request.method == "POST" or request.method == "GET":
+
+        # Provide the Product and Week Filter
+        request_params = request.json
+        
+        # Collect the request paramaters
+        product = request_params["product_id"]
+
+        # Result data frame preprocessing
+        result = eval_results.copy(deep = True)
+
+        # Product Filter
+        if product != 'All':
+            result = result[result["item_id"] == product]
+
+        # result_part1["inventoryLevel"] = result_part1.apply(lambda row : calculate_inventory_level(row["actual"], 0.95, row["stdev_demand"]), axis = 1)
+        result["inventoryLevel"] = result.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]), axis = 1)
+
+        # result_part1["demandLevel"] = result_part1["actual"]
+        result["demandLevel"] = result["ensemble_predictions"]
+
+        # result["date"] = result["week"].replace({
+        #     i : (datetime.strptime("2016-03-20", "%Y-%m-%d") + timedelta(weeks =  i)).strftime("%Y/%m/%d")
+        #     for i in range(len(result["week"].unique().tolist()) + 1)
+        # })
+        result["date"] = pd.to_datetime(result["week_date"]) + pd.to_timedelta(result["week"] * 7, unit = 'D')
+        result["date"] = result["date"].astype(str)
+
+        # Select only required columns.
+        result = result.groupby(["date"]).agg({"inventoryLevel" : "sum", "demandLevel" : "sum"}).reset_index()
+
+        # Convert the result into JSON format.
+        result = result.to_json(orient = "records") 
+
+        return result
     else:
         return abort(400)
 
