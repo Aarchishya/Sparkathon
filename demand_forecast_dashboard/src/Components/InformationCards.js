@@ -9,7 +9,7 @@ export default function InformationCards({ title, value }) {
   return (
     <Card
       sx={{
-        minWidth: 200,
+        minWidth: 250, // Adjusted for better spacing
         border: "1px solid #e0e0e0",
         boxShadow: 3,
       }}
@@ -23,6 +23,7 @@ export default function InformationCards({ title, value }) {
         }}
         sx={{
           backgroundColor: "#f5f5f5",
+          padding: "10px", // Adjust padding for better visual appeal
         }}
       />
       <CardContent>
@@ -34,7 +35,7 @@ export default function InformationCards({ title, value }) {
             height: "100px",
           }}
         >
-          <Typography variant="h6" color="textPrimary">
+          <Typography variant="h4" color="primary" fontWeight="bold">
             {value}
           </Typography>
         </Box>
