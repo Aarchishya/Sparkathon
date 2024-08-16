@@ -86,9 +86,9 @@ def eval_results_data():
     else:
         return abort(400)
     
-# @app.route("/api/v1/all_results", methods = ["GET", "POST"])
-# @cross_origin(origins='*')
-# def all_results_data():
+@app.route("/api/v1/all_results", methods = ["GET", "POST"])
+@cross_origin(origins='*')
+def all_results_data():
     if request.method == "POST" or request.method == "GET":
 
         # Result data frame preprocessing
@@ -140,67 +140,67 @@ def eval_results_data():
     else:
         return abort(400)
     
-@app.route("/api/v1/all_results", methods=["GET", "POST"])
-@cross_origin(origins='*')
-def all_results_data():
-    if request.method == "POST" or request.method == "GET":
-        request_params = request.json
+# @app.route("/api/v1/all_results", methods=["GET", "POST"])
+# @cross_origin(origins='*')
+# def all_results_data():
+#     if request.method == "POST" or request.method == "GET":
+#         request_params = request.json
 
-        # Collect the request parameters
-        week = request_params.get("week")
-        product = request_params.get("product_id")
+#         # Collect the request parameters
+#         week = request_params.get("week")
+#         product = request_params.get("product_id")
 
-        # Result data frame preprocessing
-        result_part2 = eval_results.copy(deep=True)
-        result_part1 = train_results.copy(deep=True)
+#         # Result data frame preprocessing
+#         result_part2 = eval_results.copy(deep=True)
+#         result_part1 = train_results.copy(deep=True)
 
-        # Apply week and product filters before processing
-        if week and week != "All":
-            week_number = int(week.split(" ")[1])  # Extract the week number from the format "week X"
-            result_part2 = result_part2[result_part2["week"] == week_number]
-            result_part1 = result_part1[result_part1["week"] == week_number]
+#         # Apply week and product filters before processing
+#         if week and week != "All":
+#             week_number = int(week.split(" ")[1])  # Extract the week number from the format "week X"
+#             result_part2 = result_part2[result_part2["week"] == week_number]
+#             result_part1 = result_part1[result_part1["week"] == week_number]
 
-        if product and product != "All":
-            result_part2 = result_part2[result_part2["item_id"] == product]
-            result_part1 = result_part1[result_part1["item_id"] == product]
+#         if product and product != "All":
+#             result_part2 = result_part2[result_part2["item_id"] == product]
+#             result_part1 = result_part1[result_part1["item_id"] == product]
 
-        # Preprocessing the data
-        result_part1["recordType"] = "Actual Historical"
-        result_part2["recordType"] = "Forecasted"
+#         # Preprocessing the data
+#         result_part1["recordType"] = "Actual Historical"
+#         result_part2["recordType"] = "Forecasted"
 
-        result_part1["inventoryLevel"] = result_part1.apply(
-            lambda row: calculate_inventory_level(row["actual"], 0.95, row["stdev_demand"]), axis=1)
-        result_part2["inventoryLevel"] = result_part2.apply(
-            lambda row: calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]), axis=1)
+#         result_part1["inventoryLevel"] = result_part1.apply(
+#             lambda row: calculate_inventory_level(row["actual"], 0.95, row["stdev_demand"]), axis=1)
+#         result_part2["inventoryLevel"] = result_part2.apply(
+#             lambda row: calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]), axis=1)
 
-        result_part1["demandLevel"] = result_part1["actual"]
-        result_part2["demandLevel"] = result_part2["ensemble_predictions"]
+#         result_part1["demandLevel"] = result_part1["actual"]
+#         result_part2["demandLevel"] = result_part2["ensemble_predictions"]
 
-        result_part1["productName"] = result_part1["item_id"].apply(lambda x: x.replace('_', ' '))
-        result_part2["productName"] = result_part2["item_id"].apply(lambda x: x.replace('_', ' '))
+#         result_part1["productName"] = result_part1["item_id"].apply(lambda x: x.replace('_', ' '))
+#         result_part2["productName"] = result_part2["item_id"].apply(lambda x: x.replace('_', ' '))
 
-        result_part1["productCategory"] = result_part1["item_id"].apply(lambda x: x.split('_')[0])
-        result_part2["productCategory"] = result_part2["item_id"].apply(lambda x: x.split('_')[0])
+#         result_part1["productCategory"] = result_part1["item_id"].apply(lambda x: x.split('_')[0])
+#         result_part2["productCategory"] = result_part2["item_id"].apply(lambda x: x.split('_')[0])
 
-        result_part1["date"] = result_part1["week_date"].astype(str)
-        result_part2["date"] = (pd.to_datetime(result_part2["week_date"]) + 
-                                pd.to_timedelta(result_part2["week"] * 7, unit='D')).astype(str)
+#         result_part1["date"] = result_part1["week_date"].astype(str)
+#         result_part2["date"] = (pd.to_datetime(result_part2["week_date"]) + 
+#                                 pd.to_timedelta(result_part2["week"] * 7, unit='D')).astype(str)
 
-        # Concatenate the result parts after filtering
-        result = pd.concat([result_part1, result_part2], axis=0, ignore_index=True)
+#         # Concatenate the result parts after filtering
+#         result = pd.concat([result_part1, result_part2], axis=0, ignore_index=True)
 
-        # Select only required columns
-        result = result[["date", "productName", "productCategory", "inventoryLevel", "demandLevel", "recordType"]]
-        result = result.groupby(["date", "productName", "productCategory", "recordType"]).agg(
-            {"inventoryLevel": "sum", "demandLevel": "sum"}).reset_index()
-        result = result[result["date"] != 'nan']
+#         # Select only required columns
+#         result = result[["date", "productName", "productCategory", "inventoryLevel", "demandLevel", "recordType"]]
+#         result = result.groupby(["date", "productName", "productCategory", "recordType"]).agg(
+#             {"inventoryLevel": "sum", "demandLevel": "sum"}).reset_index()
+#         result = result[result["date"] != 'nan']
 
-        # Convert the result into JSON format
-        result_json = result.to_json(orient="records")
+#         # Convert the result into JSON format
+#         result_json = result.to_json(orient="records")
 
-        return result_json
-    else:
-        return abort(400)
+#         return result_json
+#     else:
+#         return abort(400)
 
 @app.route("/api/v1/metric_cards_data", methods = ["GET", "POST"])
 @cross_origin(origins='*')
