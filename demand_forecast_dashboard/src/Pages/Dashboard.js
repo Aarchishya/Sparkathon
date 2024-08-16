@@ -146,9 +146,9 @@ export default function Dashboard() {
                 "Date",
                 "Product Name",
                 "Product Category",
+                "Record Type",
                 "Inventory Level",
                 "Demand Level",
-                "Record Type",
               ]}
             />
           </Grid>
