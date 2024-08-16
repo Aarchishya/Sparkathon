@@ -6,6 +6,7 @@ import os
 import pandas as pd
 from flask_cors import CORS, cross_origin
 from dotenv import load_dotenv
+import numpy as np
 
 
 load_dotenv()
@@ -99,8 +100,11 @@ def all_results_data():
         result_part1["recordType"] = "Actual Historical"
         result_part2["recordType"] = "Forecasted"
 
-        result_part1["inventoryLevel"] = result_part1.apply(lambda row : calculate_inventory_level(row["actual"], 0.95, row["stdev_demand"]), axis = 1)
-        result_part2["inventoryLevel"] = result_part2.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]), axis = 1)
+        result_part1["lead_time"] = np.where(result_part1["mean_demand"] != 0, (result_part1["actual"] / result_part1["mean_demand"]) * 7, 0)
+        result_part2["lead_time"] = np.where(result_part2["mean_demand"] != 0, (result_part2["ensemble_predictions"] / result_part2["mean_demand"]) * 7, 0)
+
+        result_part1["inventoryLevel"] = result_part1.apply(lambda row : calculate_inventory_level(row["actual"], 0.95, row["stdev_demand"], row["lead_time"]), axis = 1)
+        result_part2["inventoryLevel"] = result_part2.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"], row["lead_time"]), axis = 1)
 
         result_part1["demandLevel"] = result_part1["actual"]
         result_part2["demandLevel"] = result_part2["ensemble_predictions"]
@@ -134,8 +138,8 @@ def all_results_data():
         result = result.groupby(["date", "productName", "productCategory", "recordType"]).agg({"inventoryLevel" : "sum", "demandLevel" : "sum"}).reset_index()
         result = result[result["date"] != 'nan' ]
         # Convert the result into JSON format.
-        result = result.to_json(orient = "records") 
-
+        result = result[["date", "productName", "productCategory", "recordType", "inventoryLevel", "demandLevel"]].to_json(orient = "records") 
+        # print(result)
         return result
     else:
         return abort(400)
@@ -228,8 +232,9 @@ def metric_cards_data():
         # Top Metrics Card calculation    
 
         lead_time = (result["ensemble_predictions"].mean() / result["mean_demand"].mean()) * 7
+        result["lead_time"] = np.where(result["mean_demand"] != 0, (result["ensemble_predictions"] / result["mean_demand"]) * 7, 0)
 
-        result["inventoryLevel"] = result.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]), axis = 1)
+        result["inventoryLevel"] = result.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"], row["lead_time"]), axis = 1)
         dos = result["inventoryLevel"] / (result["ensemble_predictions"] / 7)
         dos = dos.fillna(0)
         dos = dos.mean()
@@ -275,8 +280,10 @@ def chart_data():
         if product != 'All':
             result = result[result["item_id"] == product]
 
+        result["lead_time"] = np.where(result["mean_demand"] != 0, (result["ensemble_predictions"] / result["mean_demand"]) * 7, 0)
+
         # result_part1["inventoryLevel"] = result_part1.apply(lambda row : calculate_inventory_level(row["actual"], 0.95, row["stdev_demand"]), axis = 1)
-        result["inventoryLevel"] = result.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"]), axis = 1)
+        result["inventoryLevel"] = result.apply(lambda row : calculate_inventory_level(row["ensemble_predictions"], 0.95, row["stdev_demand"], row["lead_time"]), axis = 1)
 
         # result_part1["demandLevel"] = result_part1["actual"]
         result["demandLevel"] = result["ensemble_predictions"]
